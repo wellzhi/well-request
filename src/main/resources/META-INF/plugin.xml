@@ -1,0 +1,133 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+    <id>com.liuxz.request.WellRequest</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+    <name>Well-request</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor email="381197562@qq.com" url="https://github.com/wellzhi">wellzhi</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+    <description><![CDATA[
+    生成接口wiki文档，提高文档撰写效率<br>
+    生成接口wiki文档，提高文档撰写效率<br>
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.java</depends>
+    <depends>com.intellij.modules.lang</depends>
+<!--    <depends>org.intellij.plugins.markdown</depends>-->
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+        <applicationService serviceImplementation="com.liuxz.request.config.WellRequestComponent"
+                            order="first"/>
+        <projectService
+                serviceImplementation="com.liuxz.request.config.WellRequestCollectionComponent"/>
+        <projectService
+                serviceImplementation="com.liuxz.request.config.WellRequestCurrentProjectConfigComponent"/>
+        <applicationService serviceImplementation="com.liuxz.request.service.GeneratorUrlService"/>
+        <applicationService
+                serviceImplementation="com.liuxz.request.generator.impl.JaxRsGenerator"/>
+        <applicationService
+                serviceImplementation="com.liuxz.request.generator.impl.SpringMethodUrlGenerator"/>
+        <applicationConfigurable id="p" displayName="Restful Well Request"
+                                 instance="com.liuxz.request.configurable.CommonConfigurable">
+            <configurable parentId="p"
+                          instance="com.liuxz.request.configurable.DataMappingConfigurable"/>
+            <configurable parentId="p"
+                          instance="com.liuxz.request.configurable.OtherConfigConfigurable"/>
+        </applicationConfigurable>
+        <toolWindow id="Well Request" anchor="right" icon="PluginIcons.fastRequest_toolwindow"
+                    factoryClass="com.liuxz.request.configurable.WellRequestToolWindowFactory"
+                    secondary="false"/>
+
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.liuxz.request.view.linemarker.WellRequestLineMarkerProvider"/>
+
+        <!--兼容性处理code-->
+        <notificationGroup id="toolWindowNotificationGroup" displayType="TOOL_WINDOW"/>
+
+        <postStartupActivity implementation="com.liuxz.request.update.WhatsNewActivity"/>
+
+        <!--        <iw.actionProvider implementation="com.liuxz.request.action.FormatActionProvider"/>-->
+
+        <!--        <editorFloatingToolbarProvider-->
+        <!--                order="after DefaultFloatingToolbarProvider"-->
+        <!--                implementation="com.liuxz.request.editor.FastRequestFloatingToolbarProvider"-->
+        <!--                id="fastRequestEditorFloatingToolbarProvider"/>-->
+
+        <!--<errorHandler
+                implementation="com.liuxz.request.diagnostic.FastRequestErrorReportSubmitter"/>-->
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+        <group id="generateUrlAndParam" text="WellRequest" description="WellRequest" popup="true">
+            <separator/>
+            <group id="generateSubGroup"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <action id="wellRequest.generator" class="com.liuxz.request.action.GenerateUrlAction"
+                    text="Generate URL and Param"
+                    description="Generate URL and Param">
+                <add-to-group group-id="JavaGenerateGroup1" anchor="before" relative-to-action="GenerateEquals"/>
+                <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl BACK_SLASH"/>
+                <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="ctrl BACK_SLASH"/>
+                <keyboard-shortcut keymap="Default for XWin" first-keystroke="ctrl BACK_SLASH"/>
+                <keyboard-shortcut keymap="$default" first-keystroke="ctrl BACK_SLASH"/>
+            </action>
+
+            <action id="wellRequest.sendAction"
+                    class="com.liuxz.request.action.ToolbarSendRequestAction">
+                <keyboard-shortcut keymap="$default" first-keystroke="alt EQUALS"/>
+            </action>
+
+            <action id="wellRequest.sendDownloadAction"
+                    class="com.liuxz.request.action.ToolbarSendAndDownloadRequestAction">
+                <keyboard-shortcut keymap="$default" first-keystroke="alt MINUS"/>
+            </action>
+        </group>
+
+        <group id="wellRequest.editor.floatGroup">
+            <action id="wellRequest.format" class="com.liuxz.request.action.FormatAction">
+                <add-to-group group-id="EditorContextBarMenu" anchor="last"/>
+            </action>
+
+        </group>
+
+        <action id="wellRequest.gotoFastRequest"
+                class="com.liuxz.request.action.GotoFastRequestAction">
+            <keyboard-shortcut first-keystroke="alt F" keymap="$default"/>
+        </action>
+
+    </actions>
+
+    <extensionPoints>
+        <extensionPoint name="requestMappingContributor" interface="com.intellij.navigation.ChooseByNameContributor"
+                        dynamic="true"/>
+    </extensionPoints>
+
+    <!-- 双击shift搜索   -->
+    <extensions defaultExtensionNs="com.intellij">
+        <searchEverywhereContributor
+                implementation="com.liuxz.request.contributor.WellRequestGotoContributor$Factory"/>
+        <searchEverywhereResultsEqualityProvider
+                implementation="com.liuxz.request.contributor.WellRequestEqualityProvider"/>
+    </extensions>
+
+<!--    <extensions defaultExtensionNs="com.liuxz.request">
+        <requestMappingContributor
+                implementation="com.liuxz.request.contributor.JavaRequestMappingContributor"/>
+
+    </extensions>-->
+
+</idea-plugin>
