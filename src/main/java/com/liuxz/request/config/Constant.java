@@ -256,6 +256,6 @@ public class Constant {
             new MethodType("PATCH", PluginIcons.ICON_PATCH)
     );
 
-    public static final String CN_DOC_DOMAIN = "https://plugins.sheng90.wang/fast-request";
-    public static final String EN_DOC_DOMAIN = "https://dromara.github.io/fast-request/en";
+    public static final String CN_DOC_DOMAIN = "https://github.com/wellzhi";
+    public static final String EN_DOC_DOMAIN = "https://github.com/wellzhi";
 }
