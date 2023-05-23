@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.12.0"
+    id("org.jetbrains.intellij") version "1.13.3"
 }
 
 group = "com.liuxz"
@@ -10,9 +10,9 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation("com.google.guava:guava:30.1.1-jre")
-    implementation("com.alibaba:fastjson:1.2.78")
-    implementation("cn.hutool:hutool-all:5.7.9")
+    implementation("com.google.guava:guava:31.1-jre")
+    implementation("com.alibaba:fastjson:2.0.32")
+    implementation("cn.hutool:hutool-all:5.8.18")
 }
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
@@ -27,10 +27,11 @@ tasks {
     withType<JavaCompile> {
         sourceCompatibility = "17"
         targetCompatibility = "17"
+        options.encoding = "UTF-8"
     }
 
     patchPluginXml {
-        sinceBuild.set("221")
+        sinceBuild.set("223")
         untilBuild.set("231.*")
     }
 
@@ -43,4 +44,5 @@ tasks {
     publishPlugin {
         token.set(System.getenv("PUBLISH_TOKEN"))
     }
+
 }
