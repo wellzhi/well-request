@@ -169,6 +169,13 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     private JProgressBar requestProgressBar;
     private JPanel prettyJsonEditorPanel; // 响应结果-pretty视图
     private JPanel responseTextAreaPanel;
+    private JPanel wikiPanel;
+    private JTextArea apiRequestTextArea;
+    private JTextArea apiResponseTextArea;
+    private JTextField apiDescTextField;
+    private JButton button1;
+    private JButton button2;
+    private JButton button3;
 
 
     private MyLanguageTextField prettyJsonLanguageTextField;
@@ -340,6 +347,9 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         group.add(new DocAction());
         group.add(new WhatsNewAction());
         group.add(new CoffeeMeAction());
+        group.addSeparator("  |  ");
+        group.add(new ApiWikiAction());
+
         ActionToolbar actionToolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, group, true);
         actionToolbar.setTargetComponent(panel);
         JComponent toolbarComponent = actionToolbar.getComponent();
@@ -2966,6 +2976,18 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             }
         }
         return null;
+    }
+
+    private final class ApiWikiAction extends AnAction {
+        public ApiWikiAction() {
+            super(MyResourceBundleUtil.getKey("ApiWikiRequest"), MyResourceBundleUtil.getKey("ApiWikiRequest"), AllIcons.Gutter.ReadAccess);
+        }
+
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            // todo wiki文档生成窗口
+        }
+
     }
 
     private final class SaveRequestAction extends AnAction {

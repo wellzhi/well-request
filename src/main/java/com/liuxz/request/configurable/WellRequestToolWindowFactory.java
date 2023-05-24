@@ -55,7 +55,6 @@ public class WellRequestToolWindowFactory implements ToolWindowFactory, DumbAwar
         apiWindowMap.put(project.getName(), collectionToolWindow);
         allApisNavToolWindowMap.put(project.getName(), allApisNavToolWindow);
 
-//        ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
         ContentFactory contentFactory = ContentFactory.getInstance();
         window.getComponent().add(window.getContent());
         Content content = contentFactory.createContent(window, "Request", true);
@@ -84,35 +83,32 @@ public class WellRequestToolWindowFactory implements ToolWindowFactory, DumbAwar
             }
         });
 
-        connect.subscribe(ConfigChangeNotifier.ENV_PROJECT_CHANGE_TOPIC,
-                new ConfigChangeNotifier() {
-                    @Override
-                    public void configChanged(boolean active, String projectName) {
-                        //有可能在全局配置下点击,
-                        WellRequestToolWindow window = windowMap.get(projectName);
-                        if (window != null) {
-                            window.changeEnvAndProject();
-                        }
-                    }
-                });
+        connect.subscribe(ConfigChangeNotifier.ENV_PROJECT_CHANGE_TOPIC, new ConfigChangeNotifier() {
+            @Override
+            public void configChanged(boolean active, String projectName) {
+                //有可能在全局配置下点击,
+                WellRequestToolWindow window = windowMap.get(projectName);
+                if (window != null) {
+                    window.changeEnvAndProject();
+                }
+            }
+        });
 
-        connect.subscribe(ConfigChangeNotifier.ADD_REQUEST_TOPIC,
-                new ConfigChangeNotifier() {
-                    @Override
-                    public void configChanged(boolean active, String projectName) {
-                        apiWindowMap.get(projectName).refresh();
-//                        collectionToolWindow.refresh();
-                    }
-                });
+        connect.subscribe(ConfigChangeNotifier.ADD_REQUEST_TOPIC, new ConfigChangeNotifier() {
+            @Override
+            public void configChanged(boolean active, String projectName) {
+                apiWindowMap.get(projectName).refresh();
+                collectionToolWindow.refresh();
+            }
+        });
 
-        connect.subscribe(ConfigChangeNotifier.LOAD_REQUEST,
-                new ConfigChangeNotifier() {
-                    @Override
-                    public void loadRequest(CollectionConfiguration.CollectionDetail detail, String projectName) {
-                        windowMap.get(projectName).refreshByCollection(detail);
-//                    window.refreshByCollection(detail);
-                    }
-                });
+        connect.subscribe(ConfigChangeNotifier.LOAD_REQUEST, new ConfigChangeNotifier() {
+            @Override
+            public void loadRequest(CollectionConfiguration.CollectionDetail detail, String projectName) {
+                windowMap.get(projectName).refreshByCollection(detail);
+                window.refreshByCollection(detail);
+            }
+        });
 
     }
 }
