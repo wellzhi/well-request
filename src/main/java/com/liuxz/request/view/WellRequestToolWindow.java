@@ -38,9 +38,7 @@ import com.intellij.icons.AllIcons;
 import com.intellij.ide.actions.RevealFileAction;
 import com.intellij.json.JsonFileType;
 import com.intellij.json.JsonLanguage;
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationAction;
-import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.*;
 import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
@@ -169,13 +167,15 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     private JProgressBar requestProgressBar;
     private JPanel prettyJsonEditorPanel; // 响应结果-pretty视图
     private JPanel responseTextAreaPanel;
-    private JPanel wikiPanel;
+    private JPanel wikiJPanel;
     private JTextArea apiRequestTextArea;
     private JTextArea apiResponseTextArea;
     private JTextField apiDescTextField;
-    private JButton button1;
-    private JButton button2;
-    private JButton button3;
+    private JButton generateButton;
+    /**
+     * 生成到文件夹
+     */
+    private JButton generate2FileButton;
 
 
     private MyLanguageTextField prettyJsonLanguageTextField;
@@ -202,14 +202,14 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     private List<ParamKeyValue> urlEncodedKeyValueList = new ArrayList<>();
     private List<ParamKeyValue> multipartKeyValueList = new ArrayList<>();
     private LinkedHashMap<String, Object> bodyParamMap;
+    private String wikiRequestParam;
+    private String wikiResponseParam;
     private AtomicBoolean urlEncodedParamChangeFlag;
     private AtomicBoolean urlParamsChangeFlag;
     private static final Map<Object, Icon> TYPE_ICONS = ImmutableMap.<Object, Icon>builder().put(TypeUtil.Type.Object.name(), PluginIcons.ICON_OBJECT).put(TypeUtil.Type.Array.name(), PluginIcons.ICON_ARRAY).put(TypeUtil.Type.String.name(), PluginIcons.ICON_STRING).put(TypeUtil.Type.Number.name(), PluginIcons.ICON_NUMBER).put(TypeUtil.Type.Boolean.name(), PluginIcons.ICON_BOOLEAN).put(TypeUtil.Type.File.name(), PluginIcons.ICON_FILE).build();
     private ComboBox<String> typeJComboBox;
     private ComboBox<String> normalTypeJComboBox;
-
     public boolean sendButtonFlag = true;
-
 
     private JTextField getKeyTextField(String text) {
         JTextField jTextField = new JTextField(text);
@@ -286,6 +286,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         renderingPathParamsPanel();
         renderingResponseInfoPanel();
         renderingJsonResponsePanel();
+        renderingWikiPanel();
 
 
         ActionLink managerConfigLink = new ActionLink("config", e -> {
@@ -296,7 +297,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         prettyJsonEditorPanel = new MyLanguageTextField(myProject, JsonLanguage.INSTANCE, JsonFileType.INSTANCE);
         responseTextAreaPanel = new MyLanguageTextField(myProject, PlainTextLanguage.INSTANCE, PlainTextFileType.INSTANCE);
         jsonParamsTextArea = new MyLanguageTextField(myProject, JsonLanguage.INSTANCE, JsonFileType.INSTANCE);
-        //设置高度固定搜索框
+        // 设置高度固定搜索框
         prettyJsonEditorPanel.setMinimumSize(new Dimension(-1, 120));
         prettyJsonEditorPanel.setPreferredSize(new Dimension(-1, 120));
         prettyJsonEditorPanel.setMaximumSize(new Dimension(-1, 1000));
@@ -308,11 +309,114 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         jsonParamsTextArea.setPreferredSize(new Dimension(-1, 120));
         jsonParamsTextArea.setMaximumSize(new Dimension(-1, 1000));
 
-        //2020.3before
+        apiRequestTextArea = new JTextArea();
+        apiRequestTextArea.setText(wikiRequestParam);
+        apiResponseTextArea = new JTextArea();
+        apiResponseTextArea.setText(wikiResponseParam);
+
+        // 2020.3before
 //        manageConfigButton = new JButton();
 //        manageConfigButton.addActionListener(e->{
 //            ShowSettingsUtil.getInstance().showSettingsDialog(myProject, "Well Request");
 //        });
+
+        generate2FileButton = new JButton();
+        generate2FileButton.addActionListener(e -> {
+            onGenerateApiWiki2File();
+        });
+        generateButton = new JButton();
+        generateButton.addActionListener(e -> {
+            onGenerateApiWiki();
+        });
+    }
+
+    private void onGenerateApiWiki() {
+        int selectedIndex = methodTypeComboBox.getSelectedIndex();
+        String apiMethodType = methodTypeComboBox.getItemAt(selectedIndex);
+
+        String apiDesc = apiDescTextField.getText();
+        // /cityService/hospital/listTopLevelCity
+        String apiUrl = urlTextField.getText();
+        String apiFileNameBody = apiUrl.replaceAll("/", "-");
+        // Api-cityService-hospital-listTopLevelCity.md
+        String apiFileName = "Api" + apiFileNameBody + ".md";
+        // api请求参数
+        String apiRequestParam = apiRequestTextArea.getText();
+        // api响应参数
+        String apiResponseParam = apiResponseTextArea.getText();
+
+        ApiDocModel apiModel = new ApiDocModel();
+        apiModel.setApiDesc(apiDesc);
+        apiModel.setNeedToken(false);
+        apiModel.setApiMethodType(apiMethodType);
+        apiModel.setApiUrl(apiUrl);
+        apiModel.setApiRequestParam(apiRequestParam);
+        apiModel.setApiResponseParam(apiResponseParam);
+        apiModel.setApiFileName(apiFileName);
+
+        String basePath = myProject.getBasePath();
+        String serviceName = myProject.getName();
+        basePath = basePath.replaceAll(serviceName,"");
+        basePath = basePath + "bizranking-design.wiki";
+
+        String apiFilePath = basePath + "/" + apiFileName;
+        apiModel.setApiFilePath(apiFilePath);
+        try {
+            ApiUtil.genApiDoc(apiModel);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void onGenerateApiWiki2File() {
+        int selectedIndex = methodTypeComboBox.getSelectedIndex();
+        String apiMethodType = methodTypeComboBox.getItemAt(selectedIndex);
+
+        String apiDesc = apiDescTextField.getText();
+        // /cityService/hospital/listTopLevelCity
+        String apiUrl = urlTextField.getText();
+        String apiFileNameBody = apiUrl.replaceAll("/", "-");
+        // Api-cityService-hospital-listTopLevelCity.md
+        String apiFileName = "Api" + apiFileNameBody + ".md";
+        // api请求参数
+        String apiRequestParam = apiRequestTextArea.getText();
+        // api响应参数
+        String apiResponseParam = apiResponseTextArea.getText();
+
+        ApiDocModel apiModel = new ApiDocModel();
+        apiModel.setApiDesc(apiDesc);
+        apiModel.setNeedToken(false);
+        apiModel.setApiMethodType(apiMethodType);
+        apiModel.setApiUrl(apiUrl);
+        apiModel.setApiRequestParam(apiRequestParam);
+        apiModel.setApiResponseParam(apiResponseParam);
+        apiModel.setApiFileName(apiFileName);
+
+        VirtualFile virtualFile = FileChooser.chooseFile(FileChooserDescriptorFactory.createSingleFolderDescriptor(), myProject, myProject.getBaseDir());
+        if (virtualFile != null) {
+            String path = virtualFile.getPath();
+            String apiFilePath = path + "/" + apiFileName;
+            apiModel.setApiFilePath(apiFilePath);
+            try {
+                ApiUtil.genApiDoc(apiModel);
+                // NotificationGroup notificationGroup = new NotificationGroup("markbook_id", NotificationDisplayType.BALLOON, true);
+                // Notification notification = notificationGroup.createNotification("Generate Document Success：" + apiFilePath, MessageType.INFO);
+                // Notifications.Bus.notify(notification);
+//                 dispose();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+
+    private void renderingWikiPanel() {
+        WellRequestConfiguration config = WellRequestComponent.getInstance().getState();
+        assert config != null;
+        ParamGroup paramGroup = config.getParamGroup();
+        String wikiParam = paramGroup.getApiRequestParam();
+        // apiRequestTextArea.setText(JSONUtil.toJsonPrettyStr(wikiParam));
+        System.out.println(wikiParam);
     }
 
     private void $$$setupUI$$$() {
@@ -368,7 +472,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         warnLabel2.setVisible(StringUtils.isBlank(getActiveDomain()));
 
 
-        //method 颜色渲染
+        // method 颜色渲染
         methodTypeComboBox.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -391,7 +495,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         });
         methodTypeComboBox.setBackground(MyColor.blue);
 
-        //responseStatus ComboBox
+        // responseStatus ComboBox
         List<Integer> values = new ArrayList<>(Constant.HttpStatusDesc.STATUS_MAP.keySet());
         CollectionComboBoxModel<Integer> responseStatusComboBoxModel = new CollectionComboBoxModel<>(values);
         responseStatusComboBox.setModel(responseStatusComboBoxModel);
@@ -399,7 +503,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         String activeEnv = getActiveEnv();
         String activeProject = getActiveProject();
 
-        //env下拉列表
+        // env下拉列表
         ArrayList<String> envListClone = Lists.newArrayList(NO_ENV);
         envListClone.addAll(JSONObject.parseObject(JSONObject.toJSONString(config.getEnvList()), ArrayList.class));
         envListClone.add("Add Env");
@@ -439,9 +543,9 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 String env = selectEnv.toString();
                 List<String> envList = config.getEnvList();
                 if (!envList.contains(env)) {
-                    //配置删除了当前的env则默认选中第一个env
+                    // 配置删除了当前的env则默认选中第一个env
                     if (envList.isEmpty()) {
-                        //env被删除完了 补全域名开关自动关闭
+                        // env被删除完了 补全域名开关自动关闭
                         config.setEnableEnv(null);
                         projectConfig.setEnableEnv(null);
                         config.setDomain(StringUtils.EMPTY);
@@ -463,13 +567,13 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                     projectConfig.setEnableEnv(env);
                 }
                 switchHeaderParam();
-                //根据当前的env和project设置url
+                // 根据当前的env和project设置url
                 setDomain(config);
             }
         });
         envModel.setSelectedItem(StringUtils.isBlank(activeEnv) ? NO_ENV : activeEnv);
 
-        //project下拉列表
+        // project下拉列表
         ArrayList<String> projectListClone = Lists.newArrayList(NO_PROJECT);
         projectListClone.addAll(JSONObject.parseObject(JSONObject.toJSONString(config.getProjectList()), ArrayList.class));
         projectListClone.add("Add Project");
@@ -508,9 +612,9 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 String projectSelect = selectProject.toString();
                 List<String> projectList = config.getProjectList();
                 if (!projectList.contains(projectSelect)) {
-                    //配置删除了当前的env则默认选中第一个env
+                    // 配置删除了当前的env则默认选中第一个env
                     if (projectList.isEmpty()) {
-                        //project被删除完了 补全域名开关自动关闭
+                        // project被删除完了 补全域名开关自动关闭
                         config.setEnableProject(null);
                         projectConfig.setEnableProject(null);
                         config.setDomain(StringUtils.EMPTY);
@@ -532,18 +636,18 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                     projectConfig.setEnableProject(projectSelect);
                 }
                 switchHeaderParam();
-                //根据当前的env和project设置url
+                // 根据当前的env和project设置url
                 setDomain(config);
             }
         });
         projectModel.setSelectedItem(StringUtils.isBlank(activeProject) ? NO_PROJECT : activeProject);
 
 
-        //更新域名
+        // 更新域名
         config.getParamGroup().setOriginUrl("");
         setDomain(config);
 
-        //动态更新text中的内容
+        // 动态更新text中的内容
         urlEncodedTabbedPane.addChangeListener(changeEvent -> {
             if (urlEncodedTabbedPane.getSelectedIndex() == 0) {
                 String paramStr = conventDataToString(urlEncodedKeyValueList);
@@ -564,7 +668,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                         }
                     }
                     urlEncodedKeyValueList = currentUrlParamsKeyValueList;
-                    //refreshTable(urlEncodedTable);
+                    // refreshTable(urlEncodedTable);
                     urlEncodedTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlEncodedKeyValueList));
                     resizeTable(urlEncodedTable);
                     setCheckBoxHeader(urlEncodedTable, urlEncodedCheckBoxHeader);
@@ -572,9 +676,9 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             }
         });
 
-        //动态更新text中的内容
+        // 动态更新text中的内容
         urlParamsTabbedPane.addChangeListener(changeEvent -> {
-            //table change 引发重新构建text
+            // table change 引发重新构建text
             if (urlParamsTabbedPane.getSelectedIndex() == 0) {
                 String paramStr = conventDataToString(urlParamsKeyValueList);
                 String currentUrlParamText = urlParamsTextArea.getText();
@@ -592,7 +696,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                         }
                     }
                     urlParamsKeyValueList = currentUrlParamsKeyValueList;
-                    //refreshTable(urlParamsTable);
+                    // refreshTable(urlParamsTable);
                     urlParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlParamsKeyValueList));
                     resizeTable(urlParamsTable);
                     setCheckBoxHeader(urlParamsTable, urlParamsCheckBoxHeader);
@@ -600,7 +704,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             }
         });
 
-        //copy param
+        // copy param
 //        jsonParamsTextArea.addMouseListener(copyMouseAdapter(jsonParamsTextArea));
 //        urlEncodedTextArea.addMouseListener(copyMouseAdapter(urlEncodedTextArea));
 //        urlParamsTextArea.addMouseListener(copyMouseAdapter(urlParamsTextArea));
@@ -609,10 +713,20 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         calcHeaderList();
 
 //        sendRequestEvent();
-        //send request
-        //2秒内不允许狂点
+        // send request
+        // 2秒内不允许狂点
         requestProgressBar.setIndeterminate(true);
         requestProgressBar.setVisible(false);
+
+        generate2FileButton = new JButton();
+        generate2FileButton.addActionListener(e -> {
+            onGenerateApiWiki2File();
+        });
+
+        generateButton = new JButton();
+        generateButton.addActionListener(e -> {
+            onGenerateApiWiki();
+        });
     }
 
     private void changeUrlParamsText() {
@@ -738,7 +852,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             });
 
             boolean formFlag = true;
-            //json优先
+            // json优先
             if (StringUtils.isNotEmpty(urlEncodedParam)) {
                 request.body(StringUtils.removeEnd(urlEncodedParam.toString(), "&"));
                 formFlag = false;
@@ -773,7 +887,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                         String duration = String.valueOf(end - start);
                         requestProgressBar.setVisible(false);
                         int status = response.getStatus();
-                        //download file
+                        // download file
                         if (fileMode && status >= 200 && status < 300) {
                             ((MyLanguageTextField) prettyJsonEditorPanel).setText("");
                             ((MyLanguageTextField) responseTextAreaPanel).setText("");
@@ -828,7 +942,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                             }
                         }
                         responseInfoParamsKeyValueList = Lists.newArrayList(new ParamKeyValue("Url", request.getUrl(), 2, TypeUtil.Type.String.name()), new ParamKeyValue("Cost", duration + " ms", 2, TypeUtil.Type.String.name()), new ParamKeyValue("Response status", status + " " + Constant.HttpStatusDesc.STATUS_MAP.get(status)), new ParamKeyValue("Date", DateUtil.formatDateTime(new Date())));
-                        //refreshTable(responseInfoTable);
+                        // refreshTable(responseInfoTable);
                         responseInfoTable.setModel(new ListTableModel<>(getColumns(Lists.newArrayList("Name", "Value")), responseInfoParamsKeyValueList));
                         responseInfoTable.getColumnModel().getColumn(0).setPreferredWidth(150);
                         responseInfoTable.getColumnModel().getColumn(0).setMaxWidth(150);
@@ -848,7 +962,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                     });
                     responseStatusComboBox.setBackground(MyColor.red);
                     responseInfoParamsKeyValueList = Lists.newArrayList(new ParamKeyValue("Url", request.getUrl(), 2, TypeUtil.Type.String.name()), new ParamKeyValue("Error", errorMsg));
-                    //refreshTable(responseInfoTable);
+                    // refreshTable(responseInfoTable);
                     responseInfoTable.setModel(new ListTableModel<>(getColumns(Lists.newArrayList("Name", "Value")), responseInfoParamsKeyValueList));
                     responseInfoTable.getColumnModel().getColumn(0).setPreferredWidth(150);
                     responseInfoTable.getColumnModel().getColumn(0).setMaxWidth(150);
@@ -868,7 +982,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             responseStatusComboBox.setSelectedItem(0);
             responseStatusComboBox.setBackground(MyColor.red);
             responseInfoParamsKeyValueList = Lists.newArrayList(new ParamKeyValue("Error", errorMsg));
-            //refreshTable(responseInfoTable);
+            // refreshTable(responseInfoTable);
             responseInfoTable.setModel(new ListTableModel<>(getColumns(Lists.newArrayList("Name", "Value")), responseInfoParamsKeyValueList));
             responseInfoTable.getColumnModel().getColumn(0).setPreferredWidth(150);
             responseInfoTable.getColumnModel().getColumn(0).setMaxWidth(150);
@@ -1046,10 +1160,10 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
 
         methodTypeComboBox.setBackground(buildMethodColor(methodType));
 
-        //method
+        // method
         methodTypeComboBox.setSelectedItem(methodType);
 
-        //headers默认取最新的
+        // headers默认取最新的
         calcHeaderList();
 
         if ("GET".equals(methodType)) {
@@ -1060,14 +1174,14 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 tabbedPane.setSelectedIndex(1);
             }
             urlParamsTabbedPane.setSelectedIndex(0);
-            //get请求urlencoded param参数为空
+            // get请求urlencoded param参数为空
             urlEncodedKeyValueList = new ArrayList<>();
             urlEncodedTextArea.setText("");
             ((LanguageTextField) jsonParamsTextArea).setText("");
         } else {
-            //body param
+            // body param
             if (!bodyKeyValueListJson.isBlank()) {
-                //json
+                // json
                 ((LanguageTextField) jsonParamsTextArea).setText(bodyKeyValueListJson);
                 tabbedPane.setSelectedIndex(3);
                 bodyTabbedPane.setSelectedIndex(0);
@@ -1081,20 +1195,20 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                     urlEncodedTextArea.setText("");
                     urlEncodedKeyValueList = new ArrayList<>();
                 } else {
-                    //urlencoded
+                    // urlencoded
                     urlEncodedTextArea.setText(urlEncodedKeyValueListText);
                     tabbedPane.setSelectedIndex(3);
                     bodyTabbedPane.setSelectedIndex(1);
                 }
-                //json设置为空
+                // json设置为空
                 ((LanguageTextField) jsonParamsTextArea).setText("");
-                //如果是非get请求则request Param为空转到url Encoded参数下
+                // 如果是非get请求则request Param为空转到url Encoded参数下
                 urlParamsKeyValueList = new ArrayList<>();
                 urlParamsTextArea.setText("");
             }
         }
 
-        //刷新table
+        // 刷新table
         pathParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), pathParamsKeyValueList));
         resizeTable(pathParamsTable);
         setCheckBoxHeader(pathParamsTable, pathParamsCheckBoxHeader);
@@ -1139,7 +1253,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             return;
         }
 
-        //reset value
+        // reset value
         multipartKeyValueList = new ArrayList<>();
         urlParamsTextArea.setText("");
         ((LanguageTextField) jsonParamsTextArea).setText("");
@@ -1150,16 +1264,18 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         LinkedHashMap<String, Object> requestParamMap = paramGroup.getRequestParamMap();
         bodyParamMap = paramGroup.getBodyParamMap();
         String methodType = paramGroup.getMethodType();
+        wikiRequestParam = paramGroup.getApiRequestParam();
+        wikiResponseParam = paramGroup.getApiResponseParam();
 
         methodTypeComboBox.setBackground(buildMethodColor(methodType));
 
-        //method
+        // method
         methodTypeComboBox.setSelectedItem(methodType);
 
-        //request param
+        // request param
         String requestParamStr = conventDataToString(conventMapToList(requestParamMap));
 
-        //默认urlParam是允许的即使是post json形式
+        // 默认urlParam是允许的即使是post json形式
         urlParamsKeyValueList = conventMapToList(requestParamMap);
         urlParamsTextArea.setText(requestParamStr);
         pathParamsKeyValueList = conventMapToList(pathParamMap);
@@ -1172,18 +1288,18 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             } else {
                 tabbedPane.setSelectedIndex(1);
             }
-            //get请求urlencoded param参数为空
+            // get请求urlencoded param参数为空
             urlEncodedKeyValueList = new ArrayList<>();
             urlEncodedTextArea.setText("");
             ((LanguageTextField) jsonParamsTextArea).setText("");
         } else {
-            //body param(form和body只能存在其一)
+            // body param(form和body只能存在其一)
             if (!bodyParamMap.isEmpty()) {
-                //json
+                // json
                 tabbedPane.setSelectedIndex(3);
                 bodyTabbedPane.setSelectedIndex(0);
                 ((LanguageTextField) jsonParamsTextArea).setText(bodyParamMapToJson());
-                //body去除form参数
+                // body去除form参数
                 urlEncodedTextArea.setText("");
                 urlEncodedKeyValueList = new ArrayList<>();
             } else {
@@ -1196,21 +1312,21 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                     urlEncodedTextArea.setText("");
                     urlEncodedKeyValueList = new ArrayList<>();
                 } else {
-                    //urlencoded
+                    // urlencoded
                     urlEncodedTextArea.setText(requestParamStr);
                     tabbedPane.setSelectedIndex(3);
                     bodyTabbedPane.setSelectedIndex(1);
                     urlEncodedTabbedPane.setSelectedIndex(0);
                     urlEncodedKeyValueList = conventMapToList(requestParamMap);
                 }
-                //json设置为空(form去除body参数)
+                // json设置为空(form去除body参数)
                 ((LanguageTextField) jsonParamsTextArea).setText("");
-                //如果是非get请求则request Param为空转到url Encoded参数下
+                // 如果是非get请求则request Param为空转到url Encoded参数下
                 urlParamsKeyValueList = new ArrayList<>();
                 urlParamsTextArea.setText("");
             }
         }
-        //刷新table
+        // 刷新table
         pathParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), pathParamsKeyValueList));
         resizeTable(pathParamsTable);
         setCheckBoxHeader(pathParamsTable, pathParamsCheckBoxHeader);
@@ -1226,6 +1342,9 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         multipartTable.setModel(new ListTableModel<>(getPathColumnInfo(), multipartKeyValueList));
         resizeTable(multipartTable);
         setCheckBoxHeader(multipartTable, multipartCheckBoxHeader);
+
+        apiRequestTextArea.setText(wikiRequestParam);
+        apiResponseTextArea.setText(wikiResponseParam);
 
         setDomain(config);
     }
@@ -1284,7 +1403,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             } else {
                 headerParamsKeyValueList.add(selectedRow + 1, new DataMapping("", ""));
             }
-            //refreshTable(headerTable);
+            // refreshTable(headerTable);
             headerTable.setModel(new ListTableModel<>(getColumns(Lists.newArrayList("", "Header Name", "Header Value")), headerParamsKeyValueList));
             headerTable.getColumnModel().getColumn(0).setMaxWidth(30);
         }).setRemoveAction(anActionButton -> {
@@ -1359,7 +1478,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             assert config != null;
             config.setHeaderList(headerParamsKeyValueList);
             saveAndChangeHeader();
-            //refreshTable(headerTable);
+            // refreshTable(headerTable);
             headerTable.setModel(new ListTableModel<>(getColumns(Lists.newArrayList("", "Header Name", "Header Value")), headerParamsKeyValueList));
             tabbedPane.setSelectedIndex(0);
             headerTable.getColumnModel().getColumn(0).setMaxWidth(30);
@@ -1405,7 +1524,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 urlParamsKeyValueList.add(selectedRow + 1, new ParamKeyValue("", "", 2, TypeUtil.Type.String.name()));
             }
             refreshTable(urlParamsTable);
-            //urlParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlParamsKeyValueList));
+            // urlParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlParamsKeyValueList));
             resizeTable(urlParamsTable);
         }).setRemoveAction(anActionButton -> {
             int[] selectedIndices = urlParamsTable.getSelectionModel().getSelectedIndices();
@@ -1413,7 +1532,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             indexes.removeIf(q -> q > urlParamsKeyValueList.size() - 1);
             indexes.stream().mapToInt(i -> i).forEach(urlParamsKeyValueList::remove);
             refreshTable(urlParamsTable);
-            //urlParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlParamsKeyValueList));
+            // urlParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlParamsKeyValueList));
             resizeTable(urlParamsTable);
             changeUrlParamsText();
         }).setToolbarPosition(ActionToolbarPosition.TOP);
@@ -1455,7 +1574,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 pathParamsKeyValueList.add(selectedRow + 1, new ParamKeyValue("", "", 2, TypeUtil.Type.String.name()));
             }
             refreshTable(pathParamsTable);
-            //pathParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), pathParamsKeyValueList));
+            // pathParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), pathParamsKeyValueList));
             resizeTable(pathParamsTable);
             changeUrl();
         }).setRemoveAction(anActionButton -> {
@@ -1464,7 +1583,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             indexes.removeIf(q -> q > pathParamsKeyValueList.size() - 1);
             indexes.stream().mapToInt(i -> i).forEach(pathParamsKeyValueList::remove);
             refreshTable(pathParamsTable);
-            //pathParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), pathParamsKeyValueList));
+            // pathParamsTable.setModel(new ListTableModel<>(getPathColumnInfo(), pathParamsKeyValueList));
             resizeTable(pathParamsTable);
             changeUrl();
         }).setToolbarPosition(ActionToolbarPosition.TOP);
@@ -1484,14 +1603,14 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         LinkedHashMap<String, Object> bodyParamMap = paramGroup.getBodyParamMap();
         String methodType = paramGroup.getMethodType();
         if (!"GET".equals(methodType)) {
-            //body param
+            // body param
             Object bodyParam = bodyParamMap.values().stream().findFirst().orElse("");
             if ("".equals(bodyParam)) {
-                //json形式 urlencoded 值为空
+                // json形式 urlencoded 值为空
                 urlEncodedKeyValueList = new ArrayList<>();
             }
         } else {
-            //get urlencoded 值为空
+            // get urlencoded 值为空
             urlEncodedKeyValueList = new ArrayList<>();
         }
         urlEncodedTable = createUrlEncodedKeyValueTable();
@@ -1509,7 +1628,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 urlEncodedKeyValueList.add(selectedRow + 1, new ParamKeyValue("", "", 2, TypeUtil.Type.String.name()));
             }
             refreshTable(urlEncodedTable);
-            //urlEncodedTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlEncodedKeyValueList));
+            // urlEncodedTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlEncodedKeyValueList));
             resizeTable(urlEncodedTable);
         }).setRemoveAction(anActionButton -> {
             int[] selectedIndices = urlEncodedTable.getSelectionModel().getSelectedIndices();
@@ -1517,7 +1636,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             indexes.removeIf(q -> q > urlEncodedKeyValueList.size() - 1);
             indexes.stream().mapToInt(i -> i).forEach(urlEncodedKeyValueList::remove);
             refreshTable(urlEncodedTable);
-            //urlEncodedTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlEncodedKeyValueList));
+            // urlEncodedTable.setModel(new ListTableModel<>(getPathColumnInfo(), urlEncodedKeyValueList));
             resizeTable(urlEncodedTable);
             changeUrlEncodedParamsText();
         }).setToolbarPosition(ActionToolbarPosition.TOP);
@@ -1531,14 +1650,14 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         LinkedHashMap<String, Object> bodyParamMap = paramGroup.getBodyParamMap();
         String methodType = paramGroup.getMethodType();
         if (!"GET".equals(methodType)) {
-            //body param
+            // body param
             Object bodyParam = bodyParamMap.values().stream().findFirst().orElse("");
             if ("".equals(bodyParam)) {
-                //json形式 urlencoded 值为空
+                // json形式 urlencoded 值为空
                 multipartKeyValueList = new ArrayList<>();
             }
         } else {
-            //get urlencoded 值为空
+            // get urlencoded 值为空
             multipartKeyValueList = new ArrayList<>();
         }
         multipartTable = createMultipartKeyValueTable();
@@ -1556,7 +1675,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 multipartKeyValueList.add(selectedRow + 1, new ParamKeyValue("", "", 2, TypeUtil.Type.String.name()));
             }
             refreshTable(multipartTable);
-            //multipartTable.setModel(new ListTableModel<>(getPathColumnInfo(), multipartKeyValueList));
+            // multipartTable.setModel(new ListTableModel<>(getPathColumnInfo(), multipartKeyValueList));
             resizeTable(multipartTable);
         }).setRemoveAction(anActionButton -> {
             int[] selectedIndices = multipartTable.getSelectionModel().getSelectedIndices();
@@ -1564,7 +1683,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             indexes.removeIf(q -> q > multipartKeyValueList.size() - 1);
             indexes.stream().mapToInt(i -> i).forEach(multipartKeyValueList::remove);
             refreshTable(multipartTable);
-            //multipartTable.setModel(new ListTableModel<>(getPathColumnInfo(), multipartKeyValueList));
+            // multipartTable.setModel(new ListTableModel<>(getPathColumnInfo(), multipartKeyValueList));
             resizeTable(multipartTable);
         }).setToolbarPosition(ActionToolbarPosition.TOP);
         multipartTablePanel = toolbarDecorator.createPanel();
@@ -1584,7 +1703,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             ParamKeyValue paramKeyValue = (ParamKeyValue) value;
             if (paramKeyValue.getCustomFlag() == 1) {
                 KV<String, ParamKeyValue> data = (KV<String, ParamKeyValue>) paramKeyValue.getValue();
-                //kv转成普通类型
+                // kv转成普通类型
                 List<ParamKeyValue> list = new ArrayList<>();
                 convertToParamKeyValueList("", data, list);
                 paramKeyValueList.addAll(list);
@@ -1616,10 +1735,10 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             Object value = paramKeyValue.getValue();
             value = paramKeyValue.getEnabled() ? value : "";
             if (paramKeyValue.getCustomFlag() == 2) {
-                //基本类型映射  key=value
+                // 基本类型映射  key=value
                 sb.append(paramKeyValue.getKey()).append("=").append(value).append("\n&");
             } else {
-                //对象 直接拼上value
+                // 对象 直接拼上value
                 sb.append(value).append("\n&");
             }
         });
@@ -1668,7 +1787,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
 
 
     private TreeTableView createJsonResponseTable() {
-        //初始化为空
+        // 初始化为空
         CustomNode root = new CustomNode("Root", "");
         convertToNode(true, root, new LinkedHashMap<>());
         ColumnInfo[] columnInfo = new ColumnInfo[]{new TreeColumnInfo("Name") {
@@ -1843,7 +1962,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     class Renderer extends ColoredTreeCellRenderer {
         @Override
         public void customizeCellRenderer(@NotNull JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
-            //解决TreeTable key加上>
+            // 解决TreeTable key加上>
             CustomNode node = (CustomNode) value;
             append(node.getKey());
             setToolTipText(node.getComment());
@@ -1863,7 +1982,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             Icon icon = icons.get(value);
             JLabel picture = new JLabel("", icon, JLabel.LEFT);
             if (index != -1) {
-                //下拉才显示值
+                // 下拉才显示值
                 picture.setText(value.toString());
             }
             picture.setHorizontalAlignment(JLabel.LEFT);
@@ -2103,7 +2222,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             String arrayKey = key + "[" + i + "]";
             Object o = childList.get(i);
             if (o instanceof ParamKeyValue) {
-                //非对象进入
+                // 非对象进入
                 ParamKeyValue paramKeyValue = (ParamKeyValue) o;
                 paramKeyValue.setKey(key + "[0]");
                 list.add(paramKeyValue);
@@ -2181,7 +2300,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                             }
                         }
                     } else {
-                        //参数直接传BeanName []
+                        // 参数直接传BeanName []
                         for (Map.Entry<String, ParamKeyValue> entry : ((KV<String, ParamKeyValue>) k).entrySet()) {
                             ParamKeyValue paramKeyValue = entry.getValue();
                             String childType = paramKeyValue.getType();
@@ -2239,12 +2358,12 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         for (int j = 0; j < dataList.size(); j++) {
             Object o = dataList.get(j);
             if (o instanceof ParamKeyValue) {
-                //非对象进入
+                // 非对象进入
                 ParamKeyValue paramKeyValue = (ParamKeyValue) o;
                 CustomNode nodeArrayIndex = new CustomNode("index " + j, paramKeyValue.getValue(), paramKeyValue.getType());
                 addNode.add(nodeArrayIndex);
             } else {
-                //对象进入
+                // 对象进入
                 KV<String, ParamKeyValue> kv = (KV<String, ParamKeyValue>) dataList.get(j);
                 CustomNode nodeArrayIndex = new CustomNode("index " + j, null, TypeUtil.Type.Object.name());
                 kv.entrySet().forEach(inKv -> {
@@ -2807,7 +2926,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         JBTable table = new JBTable(model) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                //默认只允许修改value不允许修改key
+                // 默认只允许修改value不允许修改key
                 return true;
             }
 
@@ -3017,7 +3136,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             collectionDetail = filterById(id, collectionConfiguration.getDetail());
             boolean insertFlag = collectionDetail == null;
             if (insertFlag) {
-                //插入
+                // 插入
                 collectionDetail = new CollectionConfiguration.CollectionDetail();
                 String mid = "id_" + paramGroup.getClassName() + "." + paramGroup.getMethod();
                 collectionDetail.setId(mid);
@@ -3067,7 +3186,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 }
 
 
-                //classGroup
+                // classGroup
                 if (classNameGroup == null) {
                     CollectionConfiguration.CollectionDetail groupDetail = new CollectionConfiguration.CollectionDetail();
                     groupDetail.setId(new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date()));
@@ -3082,15 +3201,15 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 }
             }
 
-            //send message to change param
+            // send message to change param
             MessageBus messageBus = myProject.getMessageBus();
             messageBus.connect();
             ConfigChangeNotifier configChangeNotifier = messageBus.syncPublisher(ConfigChangeNotifier.ADD_REQUEST_TOPIC);
             configChangeNotifier.configChanged(true, myProject.getName());
-            //兼容性处理code
+            // 兼容性处理code
             NotificationGroupManager.getInstance().getNotificationGroup("toolWindowNotificationGroup").createNotification("Success", MessageType.INFO).notify(myProject);
             // 2020.3 before
-            //new NotificationGroup("toolWindowNotificationGroup", NotificationDisplayType.TOOL_WINDOW, true).createNotification("Success", NotificationType.INFORMATION).notify(myProject);
+            // new NotificationGroup("toolWindowNotificationGroup", NotificationDisplayType.TOOL_WINDOW, true).createNotification("Success", NotificationType.INFORMATION).notify(myProject);
         }
     }
 
@@ -3102,12 +3221,12 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         @Override
         public void actionPerformed(@NotNull AnActionEvent e) {
             String curlData = getCurlDataAndCopy();
-            //兼容性处理code
+            // 兼容性处理code
             if (StringUtils.isNoneBlank(curlData)) {
                 NotificationGroupManager.getInstance().getNotificationGroup("toolWindowNotificationGroup").createNotification("Copy success", MessageType.INFO).notify(myProject);
             }
             // 2020.3 before
-            //new NotificationGroup("toolWindowNotificationGroup", NotificationDisplayType.TOOL_WINDOW, true).createNotification("Success", NotificationType.INFORMATION).notify(myProject);
+            // new NotificationGroup("toolWindowNotificationGroup", NotificationDisplayType.TOOL_WINDOW, true).createNotification("Success", NotificationType.INFORMATION).notify(myProject);
         }
     }
 

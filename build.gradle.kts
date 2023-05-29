@@ -13,6 +13,9 @@ dependencies {
     implementation("com.google.guava:guava:31.1-jre")
     implementation("com.alibaba:fastjson:2.0.32")
     implementation("cn.hutool:hutool-all:5.8.18")
+    implementation("org.projectlombok:lombok:1.18.28")
+    implementation("org.freemarker:freemarker:2.3.31")
+
 }
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html

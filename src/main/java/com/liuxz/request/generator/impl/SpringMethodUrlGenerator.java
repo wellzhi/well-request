@@ -30,15 +30,17 @@ import com.liuxz.request.config.Constant;
 import com.liuxz.request.config.WellRequestComponent;
 import com.liuxz.request.generator.FastUrlGenerator;
 import com.liuxz.request.model.DataMapping;
-import com.liuxz.request.model.WellRequestConfiguration;
 import com.liuxz.request.model.ParamGroup;
 import com.liuxz.request.model.ParamNameType;
+import com.liuxz.request.model.WellRequestConfiguration;
 import com.liuxz.request.parse.BodyParamParse;
 import com.liuxz.request.parse.PathValueParamParse;
 import com.liuxz.request.parse.RequestParamParse;
+import com.liuxz.request.parse.WikiParamParse;
 import com.liuxz.request.util.UrlUtil;
 import com.liuxz.request.view.CommonConfigView;
 import com.siyeh.ig.psiutils.CollectionUtils;
+import it.unimi.dsi.fastutil.Pair;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
@@ -51,6 +53,7 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
     private static final Logger LOGGER = Logger.getInstance(CommonConfigView.class);
     private PathValueParamParse pathValueParamParse = new PathValueParamParse();
     private BodyParamParse bodyParamParse = new BodyParamParse();
+    private WikiParamParse wikiParamParse = new WikiParamParse();
     private RequestParamParse requestParamParse = new RequestParamParse();
 
     @Override
@@ -68,17 +71,21 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
 
         List<ParamNameType> methodUrlParamList = getMethodUrlParamList(psiMethod);
         List<ParamNameType> methodBodyParamList = getMethodBodyParamList(psiMethod);
+        List<ParamNameType> methodWikiParamList = getMethodWikiParamList(psiMethod);
 
-        //pathParam
+        // pathParam
         LinkedHashMap<String, Object> pathParamMap = pathValueParamParse.parseParam(config, methodUrlParamList);
 
-        //requestParam
+        // requestParam
         LinkedHashMap<String, Object> requestParamMap = requestParamParse.parseParam(config, methodUrlParamList);
 
-        //bodyParam
+        // bodyParam
         LinkedHashMap<String, Object> bodyParamMap = bodyParamParse.parseParam(config, methodBodyParamList);
 
-        //methodType
+        // wikiParam
+        Pair<String, String> wikiParamPair = wikiParamParse.parseParam(methodWikiParamList);
+
+        // methodType
         String methodType = getMethodType(psiMethod);
 
         String methodDescription = getMethodDescription(psiMethod);
@@ -86,6 +93,8 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
         paramGroup.setPathParamMap(pathParamMap);
         paramGroup.setRequestParamMap(requestParamMap);
         paramGroup.setBodyParamMap(bodyParamMap);
+        paramGroup.setApiRequestParam(wikiParamPair.first());
+        paramGroup.setApiResponseParam(wikiParamPair.second());
         paramGroup.setMethodType(methodType);
         paramGroup.setMethodDescription(methodDescription);
 
@@ -133,7 +142,7 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
         if (annotationRequestMapping == null) {
             return StringUtils.EMPTY;
         }
-        //默认取value,再取path
+        // 默认取value,再取path
         PsiAnnotationMemberValue value = annotationRequestMapping.findDeclaredAttributeValue("value");
         value = value != null ? value : annotationRequestMapping.findDeclaredAttributeValue("path");
         if (value == null) {
@@ -141,16 +150,16 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
         }
 
         String url;
-        if(value instanceof PsiReferenceExpression){
-            PsiField psiField = (PsiField) ((PsiReferenceExpression)value).resolve();
-            url = psiField == null ? "" : psiField.getInitializer() == null? "" : psiField.getInitializer().getText();
-        } else if(value instanceof PsiArrayInitializerMemberValue){
+        if (value instanceof PsiReferenceExpression) {
+            PsiField psiField = (PsiField) ((PsiReferenceExpression) value).resolve();
+            url = psiField == null ? "" : psiField.getInitializer() == null ? "" : psiField.getInitializer().getText();
+        } else if (value instanceof PsiArrayInitializerMemberValue) {
             PsiAnnotationMemberValue[] initializers = ((PsiArrayInitializerMemberValue) value).getInitializers();
-            if(initializers.length > 0){
+            if (initializers.length > 0) {
                 PsiAnnotationMemberValue initializer = ((PsiArrayInitializerMemberValue) value).getInitializers()[0];
-                if(initializer instanceof PsiReferenceExpression){
-                    PsiField psiField = (PsiField) ((PsiReferenceExpression)initializer).resolve();
-                    url = psiField == null ? "" : psiField.getInitializer() == null? "" : psiField.getInitializer().getText();
+                if (initializer instanceof PsiReferenceExpression) {
+                    PsiField psiField = (PsiField) ((PsiReferenceExpression) initializer).resolve();
+                    url = psiField == null ? "" : psiField.getInitializer() == null ? "" : psiField.getInitializer().getText();
                 } else {
                     url = initializer.getText();
                 }
@@ -182,7 +191,8 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
         if (containingClass == null) {
             return StringUtils.EMPTY;
         }
-        PsiAnnotation annotationMapping = containingClass.getAnnotation(mapping);;
+        PsiAnnotation annotationMapping = containingClass.getAnnotation(mapping);
+        ;
 
         if (annotationMapping == null) {
             return StringUtils.EMPTY;
@@ -193,18 +203,43 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
             return StringUtils.EMPTY;
         }
         String classUrl;
-        if(value instanceof PsiReferenceExpression){
-            PsiField psiField = (PsiField) ((PsiReferenceExpressionImpl)value).resolve();
-            classUrl = psiField == null ? "" : psiField.getInitializer() == null? "" : psiField.getInitializer().getText();
+        if (value instanceof PsiReferenceExpression) {
+            PsiField psiField = (PsiField) ((PsiReferenceExpressionImpl) value).resolve();
+            classUrl = psiField == null ? "" : psiField.getInitializer() == null ? "" : psiField.getInitializer().getText();
         } else {
             classUrl = value.getText();
         }
 
         List<DataMapping> urlReplaceMappingList = config.getUrlReplaceMappingList();
         for (DataMapping dataMapping : urlReplaceMappingList) {
-            classUrl = classUrl.replace(dataMapping.getType(),dataMapping.getValue());
+            classUrl = classUrl.replace(dataMapping.getType(), dataMapping.getValue());
         }
         return classUrl.replace("\"", "");
+    }
+
+    public List<ParamNameType> getMethodWikiParamList(PsiMethod psiMethod) {
+        List<ParamNameType> paramNameTypes = new ArrayList<>();
+        PsiCodeBlock body = psiMethod.getBody();
+        PsiStatement[] statements = body.getStatements();
+        for (PsiStatement statement : statements) {
+            if (statement != null && statement instanceof PsiDeclarationStatement) {
+                PsiDeclarationStatement declarationStatement = (PsiDeclarationStatement) statement;
+                PsiElement[] declaredElements = declarationStatement.getDeclaredElements();
+                for (PsiElement declaredElement : declaredElements) {
+                    if (declaredElement != null && declaredElement instanceof PsiLocalVariable) {
+                        PsiLocalVariable localVariable = (PsiLocalVariable) declaredElement;
+                        String name = localVariable.getName();
+                        PsiType type = localVariable.getType();
+                        PsiClass psiClass = PsiUtil.resolveClassInType(type);
+                        String canonicalText = type.getCanonicalText();
+                        ParamNameType paramNameType = new ParamNameType(name, canonicalText, psiClass, Constant.SpringUrlParamConfig.REQUEST_BODY.getParseType(),type);
+                        paramNameTypes.add(paramNameType);
+                    }
+                }
+            }
+        }
+        // System.out.println(JSONUtil.toJsonPrettyStr(paramNameTypes));
+        return paramNameTypes;
     }
 
     public List<ParamNameType> getMethodBodyParamList(PsiMethod psiMethod) {
@@ -252,7 +287,7 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
             for (Constant.SpringUrlParamConfig config : urlParamConfigArray) {
                 PsiAnnotation annotation = param.getAnnotation(config.getCode());
                 if (annotation != null) {
-                    //PathVariable  RequestParam
+                    // PathVariable  RequestParam
                     Integer parseType = config.getParseType();
                     if (parseType == 1 || parseType == 2) {
                         PsiAnnotationMemberValue value = annotation.findDeclaredAttributeValue("value");
@@ -266,7 +301,7 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
                 }
             }
             if (!parseFlag) {
-                //默认无注解传参 requestParam
+                // 默认无注解传参 requestParam
                 ParamNameType paramNameType = new ParamNameType(param.getName(), param.getType().getCanonicalText(), psiClass,
                         Constant.SpringUrlParamConfig.REQUEST_PARAM.getParseType(), param.getType());
                 result.add(paramNameType);
@@ -285,17 +320,17 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
                 if (StringUtils.isNotEmpty(methodType)) {
                     return methodType;
                 } else {
-                    //RequestMapping
+                    // RequestMapping
                     PsiAnnotationMemberValue method = annotation.findDeclaredAttributeValue("method");
                     if (method == null) {
-                        //默认返回GET
+                        // 默认返回GET
                         return "GET";
                     }
                     String methodText;
-                    if(method instanceof  PsiArrayInitializerMemberValue){
+                    if (method instanceof PsiArrayInitializerMemberValue) {
                         PsiAnnotationMemberValue[] initializers = ((PsiArrayInitializerMemberValue) method).getInitializers();
-                        if(initializers.length > 0){
-                            methodText = ((PsiArrayInitializerMemberValue)method).getInitializers()[0].getText();
+                        if (initializers.length > 0) {
+                            methodText = ((PsiArrayInitializerMemberValue) method).getInitializers()[0].getText();
                         } else {
                             methodText = "";
                         }
@@ -313,21 +348,21 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
 
     @Override
     public String getMethodDescription(PsiMethod psiMethod) {
-        //优先获取swagger接口ApiOperation中的value，如果获取不到则获取javadoc
+        // 优先获取swagger接口ApiOperation中的value，如果获取不到则获取javadoc
         PsiAnnotation annotation = psiMethod.getAnnotation("io.swagger.annotations.ApiOperation");
         if (annotation != null) {
             PsiAnnotationMemberValue descValue = annotation.findDeclaredAttributeValue("value");
             if (descValue != null) {
-                return descValue.getText().replace("\"","");
+                return descValue.getText().replace("\"", "");
             }
         } else {
-            //javadoc中获取
+            // javadoc中获取
             PsiDocComment docComment = psiMethod.getDocComment();
             StringBuilder commentStringBuilder = new StringBuilder();
-            if(docComment != null){
+            if (docComment != null) {
                 PsiElement[] descriptionElements = docComment.getDescriptionElements();
                 for (PsiElement descriptionElement : descriptionElements) {
-                    if(descriptionElement instanceof PsiDocToken){
+                    if (descriptionElement instanceof PsiDocToken) {
                         commentStringBuilder.append(descriptionElement.getText());
                     }
                 }

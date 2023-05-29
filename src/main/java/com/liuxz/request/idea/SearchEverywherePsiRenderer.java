@@ -54,7 +54,10 @@ public class SearchEverywherePsiRenderer extends PsiElementListCellRenderer<PsiE
   public SearchEverywherePsiRenderer(Disposable parent) {
     setLayout(new SELayout());
 
-    ApplicationManager.getApplication().getMessageBus().connect(parent).subscribe(LafManagerListener.TOPIC, __ -> {
+    // ApplicationManager.getApplication().getMessageBus().connect(parent).subscribe(LafManagerListener.TOPIC, __ -> {
+    //   scheme = EditorColorsManager.getInstance().getSchemeForCurrentUITheme();
+    // });
+    ApplicationManager.getApplication().getMessageBus().connect(parent).subscribe(LafManagerListener.TOPIC, (LafManagerListener) __ -> {
       scheme = EditorColorsManager.getInstance().getSchemeForCurrentUITheme();
     });
   }

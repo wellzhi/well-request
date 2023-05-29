@@ -27,6 +27,8 @@ public class ParamGroup implements Serializable {
     private LinkedHashMap<String, Object> pathParamMap = new LinkedHashMap<>();
     private LinkedHashMap<String, Object> requestParamMap = new LinkedHashMap<>();
     private LinkedHashMap<String, Object> bodyParamMap = new LinkedHashMap<>();
+    private String apiRequestParam = "{}";
+    private String apiResponseParam = "{}";
     private String methodDescription;
     private String className;
     private String method;
@@ -84,10 +86,25 @@ public class ParamGroup implements Serializable {
         return bodyParamMap;
     }
 
+    public String getApiRequestParam() {
+        return apiRequestParam;
+    }
+
+    public String getApiResponseParam() {
+        return apiResponseParam;
+    }
+
     public void setBodyParamMap(LinkedHashMap<String, Object> bodyParamMap) {
         this.bodyParamMap = bodyParamMap;
     }
 
+    public void setApiRequestParam(String apiRequestParam) {
+        this.apiRequestParam = apiRequestParam;
+    }
+
+    public void setApiResponseParam(String apiResponseParam) {
+        this.apiResponseParam = apiResponseParam;
+    }
     public String getMethodDescription() {
         return methodDescription;
     }
