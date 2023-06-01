@@ -28,7 +28,9 @@ public class ParamGroup implements Serializable {
     private LinkedHashMap<String, Object> requestParamMap = new LinkedHashMap<>();
     private LinkedHashMap<String, Object> bodyParamMap = new LinkedHashMap<>();
     private String apiRequestParam = "{}";
+    private String apiRequestParamDefaultValue = "{}";
     private String apiResponseParam = "{}";
+    private String apiQuote = "- [](Struct-)";
     private String methodDescription;
     private String className;
     private String method;
@@ -135,5 +137,21 @@ public class ParamGroup implements Serializable {
 
     public void setModule(String module) {
         this.module = module;
+    }
+
+    public String getApiRequestParamDefaultValue() {
+        return apiRequestParamDefaultValue;
+    }
+
+    public void setApiRequestParamDefaultValue(String apiRequestParamDefaultValue) {
+        this.apiRequestParamDefaultValue = apiRequestParamDefaultValue;
+    }
+
+    public String getApiQuote() {
+        return apiQuote;
+    }
+
+    public void setApiQuote(String apiQuote) {
+        this.apiQuote = apiQuote;
     }
 }

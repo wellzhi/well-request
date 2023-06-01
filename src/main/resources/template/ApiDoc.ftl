@@ -19,6 +19,6 @@ ${apiResponseParam}
 ```
 
 ### Quote
-- [](Struct-)
+${apiQuoteText}
 
 ${apiMarkdownHead}

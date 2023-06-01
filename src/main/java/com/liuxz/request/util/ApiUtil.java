@@ -2,7 +2,7 @@ package com.liuxz.request.util;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.intellij.ide.fileTemplates.impl.UrlUtil;
-import com.liuxz.request.model.ApiDocModel;
+import com.liuxz.request.model.guide.ApiDocModel;
 import freemarker.cache.StringTemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;

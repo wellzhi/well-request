@@ -33,10 +33,12 @@ import com.liuxz.request.model.DataMapping;
 import com.liuxz.request.model.ParamGroup;
 import com.liuxz.request.model.ParamNameType;
 import com.liuxz.request.model.WellRequestConfiguration;
+import com.liuxz.request.model.guide.RequestParam;
+import com.liuxz.request.model.guide.ResponseParam;
+import com.liuxz.request.parse.ApiWikiParse;
 import com.liuxz.request.parse.BodyParamParse;
 import com.liuxz.request.parse.PathValueParamParse;
 import com.liuxz.request.parse.RequestParamParse;
-import com.liuxz.request.parse.WikiParamParse;
 import com.liuxz.request.util.UrlUtil;
 import com.liuxz.request.view.CommonConfigView;
 import com.siyeh.ig.psiutils.CollectionUtils;
@@ -53,7 +55,7 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
     private static final Logger LOGGER = Logger.getInstance(CommonConfigView.class);
     private PathValueParamParse pathValueParamParse = new PathValueParamParse();
     private BodyParamParse bodyParamParse = new BodyParamParse();
-    private WikiParamParse wikiParamParse = new WikiParamParse();
+    private ApiWikiParse apiWikiParse = new ApiWikiParse();
     private RequestParamParse requestParamParse = new RequestParamParse();
 
     @Override
@@ -71,8 +73,6 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
 
         List<ParamNameType> methodUrlParamList = getMethodUrlParamList(psiMethod);
         List<ParamNameType> methodBodyParamList = getMethodBodyParamList(psiMethod);
-        List<ParamNameType> methodWikiParamList = getMethodWikiParamList(psiMethod);
-
         // pathParam
         LinkedHashMap<String, Object> pathParamMap = pathValueParamParse.parseParam(config, methodUrlParamList);
 
@@ -82,9 +82,6 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
         // bodyParam
         LinkedHashMap<String, Object> bodyParamMap = bodyParamParse.parseParam(config, methodBodyParamList);
 
-        // wikiParam
-        Pair<String, String> wikiParamPair = wikiParamParse.parseParam(methodWikiParamList);
-
         // methodType
         String methodType = getMethodType(psiMethod);
 
@@ -93,8 +90,6 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
         paramGroup.setPathParamMap(pathParamMap);
         paramGroup.setRequestParamMap(requestParamMap);
         paramGroup.setBodyParamMap(bodyParamMap);
-        paramGroup.setApiRequestParam(wikiParamPair.first());
-        paramGroup.setApiResponseParam(wikiParamPair.second());
         paramGroup.setMethodType(methodType);
         paramGroup.setMethodDescription(methodDescription);
 
@@ -107,6 +102,12 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
             paramGroup.setModule(name);
         }
 
+        Pair<List<RequestParam>, List<ResponseParam>> apiParamsPair = ApiWikiParse.getApiParamsPair(psiMethod);
+        List<RequestParam> requestParams = apiParamsPair.first();
+        paramGroup.setApiRequestParam(ApiWikiParse.createApiRequestParamWiki(requestParams));
+        paramGroup.setApiRequestParamDefaultValue(ApiWikiParse.createApiRequestParamDefaultParamWiki(requestParams));
+        paramGroup.setApiResponseParam(ApiWikiParse.createApiResponseParamWiki(apiParamsPair.second()));
+        // paramGroup.setApiQuote(ApiWikiParse.createApiQuote(apiParamsPair.second()));
         return null;
     }
 
@@ -215,31 +216,6 @@ public class SpringMethodUrlGenerator extends FastUrlGenerator {
             classUrl = classUrl.replace(dataMapping.getType(), dataMapping.getValue());
         }
         return classUrl.replace("\"", "");
-    }
-
-    public List<ParamNameType> getMethodWikiParamList(PsiMethod psiMethod) {
-        List<ParamNameType> paramNameTypes = new ArrayList<>();
-        PsiCodeBlock body = psiMethod.getBody();
-        PsiStatement[] statements = body.getStatements();
-        for (PsiStatement statement : statements) {
-            if (statement != null && statement instanceof PsiDeclarationStatement) {
-                PsiDeclarationStatement declarationStatement = (PsiDeclarationStatement) statement;
-                PsiElement[] declaredElements = declarationStatement.getDeclaredElements();
-                for (PsiElement declaredElement : declaredElements) {
-                    if (declaredElement != null && declaredElement instanceof PsiLocalVariable) {
-                        PsiLocalVariable localVariable = (PsiLocalVariable) declaredElement;
-                        String name = localVariable.getName();
-                        PsiType type = localVariable.getType();
-                        PsiClass psiClass = PsiUtil.resolveClassInType(type);
-                        String canonicalText = type.getCanonicalText();
-                        ParamNameType paramNameType = new ParamNameType(name, canonicalText, psiClass, Constant.SpringUrlParamConfig.REQUEST_BODY.getParseType(),type);
-                        paramNameTypes.add(paramNameType);
-                    }
-                }
-            }
-        }
-        // System.out.println(JSONUtil.toJsonPrettyStr(paramNameTypes));
-        return paramNameTypes;
     }
 
     public List<ParamNameType> getMethodBodyParamList(PsiMethod psiMethod) {

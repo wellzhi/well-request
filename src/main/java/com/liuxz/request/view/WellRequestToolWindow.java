@@ -84,6 +84,7 @@ import com.liuxz.request.config.WellRequestComponent;
 import com.liuxz.request.config.WellRequestCurrentProjectConfigComponent;
 import com.liuxz.request.configurable.ConfigChangeNotifier;
 import com.liuxz.request.model.*;
+import com.liuxz.request.model.guide.ApiDocModel;
 import com.liuxz.request.service.GeneratorUrlService;
 import com.liuxz.request.util.*;
 import com.liuxz.request.view.component.*;
@@ -168,14 +169,17 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     private JPanel prettyJsonEditorPanel; // 响应结果-pretty视图
     private JPanel responseTextAreaPanel;
     private JPanel wikiJPanel;
-    private JTextArea apiRequestTextArea;
-    private JTextArea apiResponseTextArea;
+    private JPanel apiRequestTextArea;
+    private JPanel apiResponseTextArea;
     private JTextField apiDescTextField;
     private JButton generateButton;
     /**
      * 生成到文件夹
      */
     private JButton generate2FileButton;
+    private JTextArea apiQuoteTextArea;
+    private JComboBox<String> platformTypeComboBox;
+    private JRadioButton needTokenRadioButton;
 
 
     private MyLanguageTextField prettyJsonLanguageTextField;
@@ -202,8 +206,10 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     private List<ParamKeyValue> urlEncodedKeyValueList = new ArrayList<>();
     private List<ParamKeyValue> multipartKeyValueList = new ArrayList<>();
     private LinkedHashMap<String, Object> bodyParamMap;
-    private String wikiRequestParam;
-    private String wikiResponseParam;
+    private String wikiRequestParam = "{}";
+    private String wikiRequestParamDefaultValue;
+    private String wikiResponseParam = "{}";
+    private String wikiQuote;
     private AtomicBoolean urlEncodedParamChangeFlag;
     private AtomicBoolean urlParamsChangeFlag;
     private static final Map<Object, Icon> TYPE_ICONS = ImmutableMap.<Object, Icon>builder().put(TypeUtil.Type.Object.name(), PluginIcons.ICON_OBJECT).put(TypeUtil.Type.Array.name(), PluginIcons.ICON_ARRAY).put(TypeUtil.Type.String.name(), PluginIcons.ICON_STRING).put(TypeUtil.Type.Number.name(), PluginIcons.ICON_NUMBER).put(TypeUtil.Type.Boolean.name(), PluginIcons.ICON_BOOLEAN).put(TypeUtil.Type.File.name(), PluginIcons.ICON_FILE).build();
@@ -309,10 +315,23 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         jsonParamsTextArea.setPreferredSize(new Dimension(-1, 120));
         jsonParamsTextArea.setMaximumSize(new Dimension(-1, 1000));
 
-        apiRequestTextArea = new JTextArea();
-        apiRequestTextArea.setText(wikiRequestParam);
-        apiResponseTextArea = new JTextArea();
-        apiResponseTextArea.setText(wikiResponseParam);
+
+        apiRequestTextArea = new MyLanguageTextField(myProject, JsonLanguage.INSTANCE, JsonFileType.INSTANCE);
+        // apiRequestTextArea.setMinimumSize(new Dimension(-1, 400));
+        // apiRequestTextArea.setPreferredSize(new Dimension(-1, 400));
+        // apiRequestTextArea.setMaximumSize(new Dimension(-1, 400));
+        ((LanguageTextField) apiRequestTextArea).setText(wikiRequestParam);
+
+
+        apiResponseTextArea = new MyLanguageTextField(myProject, JsonLanguage.INSTANCE, JsonFileType.INSTANCE);
+        // apiResponseTextArea.setMinimumSize(new Dimension(-1, 200));
+        // apiResponseTextArea.setPreferredSize(new Dimension(-1, 200));
+        // apiResponseTextArea.setMaximumSize(new Dimension(-1, 200));
+        ((LanguageTextField) apiResponseTextArea).setText(wikiResponseParam);
+
+        apiQuoteTextArea = new JTextArea();
+        apiQuoteTextArea.setText(wikiQuote);
+        new MyLanguageTextField(myProject, JsonLanguage.INSTANCE, JsonFileType.INSTANCE);
 
         // 2020.3before
 //        manageConfigButton = new JButton();
@@ -333,7 +352,8 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     private void onGenerateApiWiki() {
         int selectedIndex = methodTypeComboBox.getSelectedIndex();
         String apiMethodType = methodTypeComboBox.getItemAt(selectedIndex);
-
+        // 是否需要token
+        boolean needToken = needTokenRadioButton.isSelected();
         String apiDesc = apiDescTextField.getText();
         // /cityService/hospital/listTopLevelCity
         String apiUrl = urlTextField.getText();
@@ -341,9 +361,10 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         // Api-cityService-hospital-listTopLevelCity.md
         String apiFileName = "Api" + apiFileNameBody + ".md";
         // api请求参数
-        String apiRequestParam = apiRequestTextArea.getText();
+        String apiRequestParam = ((LanguageTextField) apiRequestTextArea).getText();
         // api响应参数
-        String apiResponseParam = apiResponseTextArea.getText();
+        String apiResponseParam = ((LanguageTextField) apiResponseTextArea).getText();
+        String apiQuoteText = apiQuoteTextArea.getText();
 
         ApiDocModel apiModel = new ApiDocModel();
         apiModel.setApiDesc(apiDesc);
@@ -353,6 +374,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         apiModel.setApiRequestParam(apiRequestParam);
         apiModel.setApiResponseParam(apiResponseParam);
         apiModel.setApiFileName(apiFileName);
+        apiModel.setApiQuoteText(apiQuoteText);
 
         String basePath = myProject.getBasePath();
         String serviceName = myProject.getName();
@@ -371,7 +393,8 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
     private void onGenerateApiWiki2File() {
         int selectedIndex = methodTypeComboBox.getSelectedIndex();
         String apiMethodType = methodTypeComboBox.getItemAt(selectedIndex);
-
+        // 是否需要token
+        boolean needToken = needTokenRadioButton.isSelected();
         String apiDesc = apiDescTextField.getText();
         // /cityService/hospital/listTopLevelCity
         String apiUrl = urlTextField.getText();
@@ -379,18 +402,20 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         // Api-cityService-hospital-listTopLevelCity.md
         String apiFileName = "Api" + apiFileNameBody + ".md";
         // api请求参数
-        String apiRequestParam = apiRequestTextArea.getText();
+        String apiRequestParam = ((LanguageTextField) apiRequestTextArea).getText();
         // api响应参数
-        String apiResponseParam = apiResponseTextArea.getText();
+        String apiResponseParam = ((LanguageTextField) apiResponseTextArea).getText();
+        String apiQuoteText = apiQuoteTextArea.getText();
 
         ApiDocModel apiModel = new ApiDocModel();
         apiModel.setApiDesc(apiDesc);
-        apiModel.setNeedToken(false);
+        apiModel.setNeedToken(needToken);
         apiModel.setApiMethodType(apiMethodType);
         apiModel.setApiUrl(apiUrl);
         apiModel.setApiRequestParam(apiRequestParam);
         apiModel.setApiResponseParam(apiResponseParam);
         apiModel.setApiFileName(apiFileName);
+        apiModel.setApiQuoteText(apiQuoteText);
 
         VirtualFile virtualFile = FileChooser.chooseFile(FileChooserDescriptorFactory.createSingleFolderDescriptor(), myProject, myProject.getBaseDir());
         if (virtualFile != null) {
@@ -399,10 +424,14 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             apiModel.setApiFilePath(apiFilePath);
             try {
                 ApiUtil.genApiDoc(apiModel);
+
+                NotificationGroupManager.getInstance().getNotificationGroup("toolWindowNotificationGroup")
+                        .createNotification("Generate Document Success：" + apiFilePath, MessageType.INFO).notify(myProject);
+
                 // NotificationGroup notificationGroup = new NotificationGroup("markbook_id", NotificationDisplayType.BALLOON, true);
                 // Notification notification = notificationGroup.createNotification("Generate Document Success：" + apiFilePath, MessageType.INFO);
                 // Notifications.Bus.notify(notification);
-//                 dispose();
+                // dispose();
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -416,7 +445,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         ParamGroup paramGroup = config.getParamGroup();
         String wikiParam = paramGroup.getApiRequestParam();
         // apiRequestTextArea.setText(JSONUtil.toJsonPrettyStr(wikiParam));
-        System.out.println(wikiParam);
+        // System.out.println(wikiParam);
     }
 
     private void $$$setupUI$$$() {
@@ -451,8 +480,8 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         group.add(new DocAction());
         group.add(new WhatsNewAction());
         group.add(new CoffeeMeAction());
-        group.addSeparator("  |  ");
-        group.add(new ApiWikiAction());
+        // group.addSeparator("  |  ");
+        // group.add(new ApiWikiAction());
 
         ActionToolbar actionToolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, group, true);
         actionToolbar.setTargetComponent(panel);
@@ -808,9 +837,11 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
             NameGroup defaultNameGroup = new NameGroup(StringUtils.EMPTY, new ArrayList<>());
             HostGroup defaultHostGroup = new HostGroup(StringUtils.EMPTY, StringUtils.EMPTY);
             String domain = config.getDataList().stream().filter(n -> n.getName().equals(projectComboBox.getSelectedItem())).findFirst().orElse(defaultNameGroup).getHostGroup().stream().filter(h -> h.getEnv().equals(envComboBox.getSelectedItem())).findFirst().orElse(defaultHostGroup).getUrl();
-
             String sendUrl = urlTextField.getText();
-            if (StringUtils.isBlank(domain) || !UrlUtil.isURL(domain + sendUrl)) {
+            // 拼接平台类型字符串
+            Object platformType = platformTypeComboBox.getSelectedItem();
+            String platformStr = platformType.toString();
+            if (StringUtils.isBlank(domain) || !UrlUtil.isURL(domain + sendUrl +"?ver=" + platformStr)) {
                 ApplicationManager.getApplication().invokeLater(() -> {
                     ((MyLanguageTextField) responseTextAreaPanel).setText("Correct url required");
                 });
@@ -821,7 +852,7 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                 return;
             }
             String methodType = (String) methodTypeComboBox.getSelectedItem();
-            HttpRequest request = HttpUtil.createRequest(Method.valueOf(methodType), domain + sendUrl);
+            HttpRequest request = HttpUtil.createRequest(Method.valueOf(methodType), domain + sendUrl +"?ver=" + platformStr);
             request.setMaxRedirectCount(10);
             headerParamsKeyValueList = headerParamsKeyValueList == null ? new ArrayList<>() : headerParamsKeyValueList;
             List<DataMapping> globalHeaderList = config.getGlobalHeaderList();
@@ -1146,6 +1177,17 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         String multipartKeyValueListJson = paramGroup.getMultipartKeyValueListJson();
         String domain = detail.getDomain();
         String url = paramGroup.getUrl();
+        String apiRequestParam = paramGroupConfig.getApiRequestParam();
+        String apiRequestParamDefaultValue = paramGroupConfig.getApiRequestParamDefaultValue();
+        String apiResponseParam = paramGroupConfig.getApiResponseParam();
+        String apiQuote = paramGroupConfig.getApiQuote();
+        ((LanguageTextField) apiRequestTextArea).setText(apiRequestParam);
+        ((LanguageTextField) jsonParamsTextArea).setText(apiRequestParamDefaultValue);
+        ((LanguageTextField) apiResponseTextArea).setText(apiResponseParam);
+        apiQuoteTextArea = new JTextArea();
+        apiQuoteTextArea.setText(apiQuote);
+
+
 
         pathParamsKeyValueList = JSON.parseObject(pathParamsKeyValueListJson, new TypeReference<List<ParamKeyValue>>() {
         });
@@ -1266,7 +1308,8 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         String methodType = paramGroup.getMethodType();
         wikiRequestParam = paramGroup.getApiRequestParam();
         wikiResponseParam = paramGroup.getApiResponseParam();
-
+        wikiRequestParamDefaultValue = paramGroup.getApiRequestParamDefaultValue();
+        wikiQuote = paramGroup.getApiQuote();
         methodTypeComboBox.setBackground(buildMethodColor(methodType));
 
         // method
@@ -1315,7 +1358,8 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
                     // urlencoded
                     urlEncodedTextArea.setText(requestParamStr);
                     tabbedPane.setSelectedIndex(3);
-                    bodyTabbedPane.setSelectedIndex(1);
+                    // wellzhi
+                    bodyTabbedPane.setSelectedIndex(0);
                     urlEncodedTabbedPane.setSelectedIndex(0);
                     urlEncodedKeyValueList = conventMapToList(requestParamMap);
                 }
@@ -1343,9 +1387,11 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         resizeTable(multipartTable);
         setCheckBoxHeader(multipartTable, multipartCheckBoxHeader);
 
-        apiRequestTextArea.setText(wikiRequestParam);
-        apiResponseTextArea.setText(wikiResponseParam);
 
+        ((LanguageTextField) apiRequestTextArea).setText(wikiRequestParam);
+        ((LanguageTextField) apiResponseTextArea).setText(wikiResponseParam);
+        apiQuoteTextArea.setText(wikiQuote);
+        ((LanguageTextField) jsonParamsTextArea).setText(wikiRequestParamDefaultValue);
         setDomain(config);
     }
 
@@ -3097,17 +3143,17 @@ public class WellRequestToolWindow extends SimpleToolWindowPanel {
         return null;
     }
 
-    private final class ApiWikiAction extends AnAction {
-        public ApiWikiAction() {
-            super(MyResourceBundleUtil.getKey("ApiWikiRequest"), MyResourceBundleUtil.getKey("ApiWikiRequest"), AllIcons.Gutter.ReadAccess);
-        }
-
-        @Override
-        public void actionPerformed(@NotNull AnActionEvent e) {
-            // todo wiki文档生成窗口
-        }
-
-    }
+    // private final class ApiWikiAction extends AnAction {
+    //     public ApiWikiAction() {
+    //         super(MyResourceBundleUtil.getKey("ApiWikiRequest"), MyResourceBundleUtil.getKey("ApiWikiRequest"), AllIcons.Gutter.ReadAccess);
+    //     }
+    //
+    //     @Override
+    //     public void actionPerformed(@NotNull AnActionEvent e) {
+    //         // todo wiki文档生成窗口
+    //     }
+    //
+    // }
 
     private final class SaveRequestAction extends AnAction {
         public SaveRequestAction() {

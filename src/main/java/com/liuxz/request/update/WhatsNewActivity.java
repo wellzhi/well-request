@@ -32,8 +32,8 @@ public class WhatsNewActivity implements StartupActivity {
 
     @Override
     public void runActivity(@NotNull Project project) {
-        String GITHUB_DOC_URL = String.format("%s/guide/whatsnew", Constant.EN_DOC_DOMAIN);
-        String GITEE_DOC_URL = String.format("%s/guide/whatsnew", "https://dromara.gitee.io/fast-request");
+        String GITHUB_DOC_URL = String.format("%s/", Constant.EN_DOC_DOMAIN);
+        String GITEE_DOC_URL = String.format("%s/", "https://github.com/wellzhi");
         IdeaPluginDescriptor plugin = PluginManagerCore.getPlugin(PluginId.getId("com.liuxz.request.WellRequest"));
         if (plugin != null) {
             String lastVersion = plugin.getVersion();

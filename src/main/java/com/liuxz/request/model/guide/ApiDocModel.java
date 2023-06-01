@@ -1,4 +1,4 @@
-package com.liuxz.request.model;
+package com.liuxz.request.model.guide;
 
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.DateUtil;
@@ -16,6 +16,8 @@ public class ApiDocModel {
     private String apiResponseParam;
     private String apiFileName;
     private String apiFilePath;
+
+    private String apiQuoteText;
     // 中间变量
     private String apiMarkdownHead;
 
@@ -94,5 +96,13 @@ public class ApiDocModel {
         int size = nameItems.size();
         String markdownPrefix = size > 2 ? "|" + nameItems.get(0) + "|" + nameItems.get(1) + "|" : "|" + nameItems.get(0) + "|";
         return markdownPrefix + "[" + nameItems.get(nameItems.size() - 1) + "](" + "Api-" + apiFileNameBody + ")|R|" + apiDesc + "|:green_apple:|" + todayStr + "|";
+    }
+
+    public String getApiQuoteText() {
+        return apiQuoteText;
+    }
+
+    public void setApiQuoteText(String apiQuoteText) {
+        this.apiQuoteText = apiQuoteText;
     }
 }
